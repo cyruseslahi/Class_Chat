@@ -5,7 +5,7 @@
 // Get it from: Supabase Dashboard > Project Settings > API > anon/public key
 
 const supabaseUrl = 'https://wajonnuqudzgjivsgiam.supabase.co';
-const supabaseKey = 'YOUR_SUPABASE_ANON_KEY'; // ⚠️ REPLACE THIS WITH YOUR ACTUAL ANON KEY
+const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Indham9ubnVxdWR6Z2ppdnNnaWFtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIwMzc2NzcsImV4cCI6MjA3NzYxMzY3N30.ljne1SPpDli8H8OQ_y4vxN3qrqwlaxzEt5cKxUZmfeI'; 
 const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
 
 // ============================================
@@ -159,6 +159,7 @@ const logoutBtn = document.getElementById('logoutBtn');
 
 // Auth state
 let isSignupMode = false;
+let isModalOpen = false; // Global flag to pause typing when modal is open
 
 // Initialize
 function init() {
@@ -544,8 +545,11 @@ function setupEventListeners() {
             notificationBtn.classList.remove('active');
         }
 
-        // Don't refocus if clicking on modal buttons or links
+        // Don't refocus if modal is open or clicking on modal/panel elements
+        if (isModalOpen) return;
+
         if (!e.target.closest('.modal-content') &&
+            !e.target.closest('.auth-modal') &&
             !e.target.closest('button') &&
             !e.target.closest('.notification-panel')) {
             focusInput();
@@ -554,7 +558,11 @@ function setupEventListeners() {
 
     // Also handle mousedown to catch focus before it's lost
     document.addEventListener('mousedown', (e) => {
+        // Don't refocus if modal is open
+        if (isModalOpen) return;
+
         if (!e.target.closest('.modal-content') &&
+            !e.target.closest('.auth-modal') &&
             !e.target.closest('button') &&
             !e.target.closest('.notification-panel') &&
             e.target !== hiddenInput) {
@@ -564,20 +572,25 @@ function setupEventListeners() {
     });
 
     // Prevent input from losing focus - aggressive refocus
-    hiddenInput.addEventListener('blur', (e) => {
+    hiddenInput.addEventListener('blur', () => {
         console.log('Input lost focus, refocusing...');
-        // Always refocus unless a modal is active
-        if (!document.querySelector('.modal.active')) {
-            // Use multiple methods to ensure focus is regained
-            setTimeout(() => focusInput(), 0);
-            setTimeout(() => focusInput(), 10);
-            setTimeout(() => focusInput(), 50);
+        // Don't refocus if modal is open or if any modal/panel is active
+        if (isModalOpen || document.querySelector('.modal.active') || notificationPanel.classList.contains('active')) {
+            return;
         }
+        // Use multiple methods to ensure focus is regained
+        setTimeout(() => focusInput(), 0);
+        setTimeout(() => focusInput(), 10);
+        setTimeout(() => focusInput(), 50);
     });
 
     // Periodically check focus (safety net)
     setInterval(() => {
-        if (document.activeElement !== hiddenInput && !document.querySelector('.modal.active')) {
+        // Don't refocus if modal is open or any panel is active
+        if (isModalOpen || document.querySelector('.modal.active') || notificationPanel.classList.contains('active')) {
+            return;
+        }
+        if (document.activeElement !== hiddenInput) {
             console.log('Focus lost, recovering...');
             focusInput();
         }
@@ -588,7 +601,13 @@ function setupEventListeners() {
     let lastProcessedTime = 0;
 
     // Use input event ONLY - this prevents double processing
-    hiddenInput.addEventListener('input', (e) => {
+    hiddenInput.addEventListener('input', () => {
+        // Pause typing when modal is open
+        if (isModalOpen) {
+            hiddenInput.value = '';
+            return;
+        }
+
         // Get the input value
         const value = hiddenInput.value;
 
@@ -799,12 +818,16 @@ function setupEventListeners() {
     // Open login modal
     loginBtn.addEventListener('click', (e) => {
         e.stopPropagation();
+        isModalOpen = true; // Set flag to pause typing
         authModal.classList.add('active');
         hiddenInput.blur();
+        // Focus the email input after modal opens
+        setTimeout(() => emailInput.focus(), 100);
     });
 
     // Close auth modal
     authCloseBtn.addEventListener('click', () => {
+        isModalOpen = false; // Clear flag to resume typing
         authModal.classList.remove('active');
         clearAuthForm();
         setTimeout(focusInput, 100);
@@ -813,6 +836,7 @@ function setupEventListeners() {
     // Close auth modal on overlay click
     authModal.addEventListener('click', (e) => {
         if (e.target === authModal || e.target.classList.contains('auth-overlay')) {
+            isModalOpen = false; // Clear flag to resume typing
             authModal.classList.remove('active');
             clearAuthForm();
             setTimeout(focusInput, 100);
@@ -937,6 +961,7 @@ async function handleLogin(email, password) {
 
     // Update UI
     updateHeaderForLoggedInUser(userData.username, userData.level);
+    isModalOpen = false; // Clear flag to resume typing
     authModal.classList.remove('active');
     clearAuthForm();
 
@@ -1001,6 +1026,7 @@ async function handleSignup(email, password, username) {
 
     // Update UI
     updateHeaderForLoggedInUser(userData.username, userData.level);
+    isModalOpen = false; // Clear flag to resume typing
     authModal.classList.remove('active');
     clearAuthForm();
 
