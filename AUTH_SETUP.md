@@ -43,6 +43,13 @@ CREATE TABLE profiles (
   id uuid PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   username text UNIQUE NOT NULL,
   level int DEFAULT 1,
+  bio text,
+  total_time_typed int DEFAULT 0,
+  streak_current int DEFAULT 0,
+  streak_best int DEFAULT 0,
+  tests_started int DEFAULT 0,
+  tests_completed int DEFAULT 0,
+  activity_log jsonb DEFAULT '{}'::jsonb,
   created_at timestamp with time zone DEFAULT now()
 );
 

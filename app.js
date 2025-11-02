@@ -37,12 +37,12 @@ function updateHeaderForLoggedInUser(username, level) {
     const loginBtn = document.getElementById('loginBtn');
     const userSection = document.getElementById('userSection');
     const usernameEl = document.getElementById('username');
-    const levelNumberEl = document.getElementById('levelNumber');
+    const levelBadgeEl = document.getElementById('levelBadge');
 
     loginBtn.style.display = 'none';
     userSection.style.display = 'flex';
     usernameEl.textContent = username;
-    levelNumberEl.textContent = level;
+    levelBadgeEl.textContent = level;
 }
 
 // Update header to show logged-out state
@@ -52,6 +52,659 @@ function updateHeaderForLoggedOutUser() {
 
     loginBtn.style.display = 'block';
     userSection.style.display = 'none';
+}
+
+// ============================================
+// NOTIFICATION SYSTEM
+// ============================================
+
+// Get notifications from localStorage
+function getNotifications() {
+    const notifications = localStorage.getItem('retype_notifications');
+    return notifications ? JSON.parse(notifications) : [];
+}
+
+// Save notifications to localStorage
+function saveNotifications(notifications) {
+    localStorage.setItem('retype_notifications', JSON.stringify(notifications));
+}
+
+// Add a new notification
+function addNotification(title, message, time = 'just now') {
+    const notifications = getNotifications();
+    notifications.unshift({
+        id: Date.now(),
+        title,
+        message,
+        time,
+        read: false
+    });
+    saveNotifications(notifications);
+    updateNotificationBadge();
+    renderNotifications();
+}
+
+// Update the notification badge
+function updateNotificationBadge() {
+    const notifications = getNotifications();
+    const unreadCount = notifications.filter(n => !n.read).length;
+    const badge = document.getElementById('notificationBadge');
+
+    if (badge) {
+        if (unreadCount > 0) {
+            badge.textContent = unreadCount > 9 ? '9+' : unreadCount;
+            badge.style.display = 'flex';
+        } else {
+            badge.style.display = 'none';
+        }
+    }
+}
+
+// Mark all notifications as read
+function markAllNotificationsAsRead() {
+    const notifications = getNotifications();
+    notifications.forEach(n => n.read = true);
+    saveNotifications(notifications);
+    updateNotificationBadge();
+}
+
+// Render notifications in the panel
+function renderNotifications() {
+    const notificationList = document.getElementById('notificationList');
+    const notifications = getNotifications();
+
+    if (!notificationList) return;
+
+    if (notifications.length === 0) {
+        notificationList.innerHTML = '<div class="notification-empty">No notifications yet.</div>';
+        return;
+    }
+
+    notificationList.innerHTML = notifications.map(notif => `
+        <div class="notification-item">
+            <div class="notification-icon">${getNotificationIcon(notif.title)}</div>
+            <div class="notification-content">
+                <p class="notification-item-title">${notif.title}</p>
+                <p class="notification-item-message">${notif.message}</p>
+                <span class="notification-time">${notif.time}</span>
+            </div>
+        </div>
+    `).join('');
+}
+
+// Get icon based on notification title
+function getNotificationIcon(title) {
+    if (title.includes('Welcome') || title.includes('account')) return '🎉';
+    if (title.includes('Verify')) return '✉️';
+    if (title.includes('best') || title.includes('WPM')) return '⚡';
+    if (title.includes('completed')) return '🎯';
+    return '📚';
+}
+
+// Check if user hit 67 WPM (trigger notification once)
+function checkWPMMilestone(wpm) {
+    const hasNotified = localStorage.getItem('notif_hit_67');
+
+    if (!hasNotified && wpm >= 67) {
+        localStorage.setItem('notif_hit_67', 'true');
+        addNotification(
+            'New personal best!',
+            'You hit 67+ WPM — great job!',
+            'today'
+        );
+    }
+}
+
+// ============================================
+// PROFILE SYSTEM
+// ============================================
+
+// Load and display profile data
+async function loadProfileData() {
+    const user = currentUser || JSON.parse(localStorage.getItem('retype_user') || 'null');
+
+    // Get real data from localStorage and Supabase
+    const streakData = getStreakData();
+    const testsStats = getTestsStats();
+    const totalTime = getTotalTypingTime();
+    const activityLog = getActivityLog();
+
+    // Update header info
+    const username = user ? (user.username || 'Guest') : 'Guest';
+    const level = user ? (user.level || 1) : 1;
+
+    document.getElementById('profileUsername').textContent = username;
+    document.getElementById('profileLevelBadge').textContent = level;
+    document.getElementById('profileAvatarInitial').textContent = username[0].toUpperCase();
+
+    // Update join date
+    if (user && user.created_at) {
+        const joinDate = new Date(user.created_at);
+        const day = joinDate.getDate();
+        const month = joinDate.toLocaleDateString('en-US', { month: 'short' });
+        const year = joinDate.getFullYear();
+        document.getElementById('profileJoinDate').textContent = `${day} ${month} ${year}`;
+    } else {
+        document.getElementById('profileJoinDate').textContent = 'guest session';
+    }
+
+    // Update streak
+    document.getElementById('profileStreak').textContent = `${streakData.current} days`;
+
+    // Update total time typed
+    document.getElementById('profileTotalTime').textContent = formatTime(totalTime);
+
+    // Update tests started/completed
+    document.getElementById('profileTestsStarted').textContent = testsStats.started;
+    document.getElementById('profileTestsCompleted').textContent = testsStats.completed;
+
+    // Calculate average WPM from activity (placeholder - we'll improve this later)
+    const avgWPM = 0; // TODO: Calculate from test history
+    document.getElementById('profileAvgWPM').textContent = avgWPM;
+
+    // Update XP progress (mock calculation: level * 1000 XP per level)
+    const xpForNextLevel = level * 1000;
+    const currentXP = (testsStats.completed * 50) % xpForNextLevel; // 50 XP per test
+    const xpProgress = (currentXP / xpForNextLevel) * 100;
+    document.getElementById('profileXPFill').style.width = `${xpProgress}%`;
+    document.getElementById('profileXPText').textContent = `${currentXP} / ${xpForNextLevel} XP`;
+
+    // Load bio
+    await loadProfileBio();
+
+    // Render personal bests (placeholder for now)
+    renderPersonalBestsPlaceholder();
+
+    // Render activity heatmap with real data
+    renderActivityHeatmap(activityLog);
+
+    // Render performance graph (placeholder for now)
+    renderPerformanceGraphPlaceholder();
+}
+
+// Load bio from Supabase or localStorage
+async function loadProfileBio() {
+    const user = currentUser || JSON.parse(localStorage.getItem('retype_user') || 'null');
+    if (!user) return;
+
+    // Try to load from Supabase first
+    if (supabase && user.id) {
+        const { data, error } = await supabase
+            .from('profiles')
+            .select('bio')
+            .eq('id', user.id)
+            .single();
+
+        if (!error && data && data.bio) {
+            document.getElementById('profileBioText').textContent = data.bio;
+            return;
+        }
+    }
+
+    // Fallback to localStorage
+    const localBio = localStorage.getItem('retype_profile_bio');
+    if (localBio) {
+        document.getElementById('profileBioText').textContent = localBio;
+    }
+}
+
+// Save bio to Supabase and localStorage
+async function saveProfileBio(bioText) {
+    const user = currentUser || JSON.parse(localStorage.getItem('retype_user') || 'null');
+
+    // Save to localStorage
+    localStorage.setItem('retype_profile_bio', bioText);
+
+    // Save to Supabase if available
+    if (supabase && user && user.id) {
+        await supabase
+            .from('profiles')
+            .update({ bio: bioText })
+            .eq('id', user.id);
+    }
+}
+
+// Render personal bests placeholder
+function renderPersonalBestsPlaceholder() {
+    const grid = document.getElementById('profileStatsGrid');
+    const durations = [
+        { label: '15 seconds' },
+        { label: '30 seconds' },
+        { label: '60 seconds' },
+        { label: '120 seconds' }
+    ];
+
+    grid.innerHTML = durations.map(({ label }) => {
+        return `
+            <div class="profile-stat-card" style="opacity: 0.5;">
+                <div class="stat-card-time">${label}</div>
+                <div class="stat-card-wpm" style="font-size: 0.875rem; color: rgba(255, 255, 255, 0.5);">coming soon</div>
+                <div class="stat-card-acc">--% acc</div>
+            </div>
+        `;
+    }).join('');
+}
+
+// Render activity heatmap
+function renderActivityHeatmap(activityDays) {
+    const heatmap = document.getElementById('profileHeatmap');
+
+    // Generate last 12 months of data
+    const today = new Date();
+    const startDate = new Date(today);
+    startDate.setMonth(startDate.getMonth() - 12);
+
+    // Create month structure
+    const months = [];
+    let currentMonth = new Date(startDate);
+
+    while (currentMonth <= today) {
+        const monthData = {
+            label: currentMonth.toLocaleDateString('en-US', { month: 'short' }),
+            weeks: []
+        };
+
+        const monthStart = new Date(currentMonth);
+        const monthEnd = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0);
+
+        // Generate weeks for this month
+        let weekStart = new Date(monthStart);
+        weekStart.setDate(weekStart.getDate() - weekStart.getDay()); // Start from Sunday
+
+        while (weekStart <= monthEnd) {
+            const week = [];
+            for (let i = 0; i < 7; i++) {
+                const day = new Date(weekStart);
+                day.setDate(day.getDate() + i);
+
+                if (day >= monthStart && day <= monthEnd && day <= today) {
+                    const dateKey = day.toISOString().split('T')[0];
+                    const count = activityDays[dateKey] || 0;
+                    const level = count === 0 ? 0 : Math.min(4, Math.ceil(count / 2));
+
+                    week.push({ date: dateKey, level, count });
+                } else {
+                    week.push(null);
+                }
+            }
+            monthData.weeks.push(week);
+            weekStart.setDate(weekStart.getDate() + 7);
+        }
+
+        months.push(monthData);
+        currentMonth.setMonth(currentMonth.getMonth() + 1);
+    }
+
+    // Render heatmap HTML
+    const weekdayLabels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+    heatmap.innerHTML = `
+        <div class="heatmap-grid">
+            <div class="heatmap-weekdays">
+                ${weekdayLabels.map(day => `<div class="heatmap-weekday">${day}</div>`).join('')}
+            </div>
+            <div class="heatmap-months">
+                ${months.map(month => `
+                    <div class="heatmap-month">
+                        <div class="heatmap-month-label">${month.label}</div>
+                        ${month.weeks.map(week => `
+                            <div class="heatmap-week">
+                                ${week.map(day => day
+                                    ? `<div class="heatmap-day" data-level="${day.level}" title="${day.date}: ${day.count} tests"></div>`
+                                    : `<div class="heatmap-day" style="opacity: 0;"></div>`
+                                ).join('')}
+                            </div>
+                        `).join('')}
+                    </div>
+                `).join('')}
+            </div>
+        </div>
+    `;
+}
+
+// Render performance graph
+function renderPerformanceGraph(testHistory) {
+    const canvas = document.getElementById('profilePerformanceGraph');
+    const ctx = canvas.getContext('2d');
+
+    // Set canvas size
+    const container = canvas.parentElement;
+    canvas.width = container.clientWidth;
+    canvas.height = 300;
+
+    // Clear canvas
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    if (testHistory.length === 0) {
+        // Show "No data" message
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+        ctx.font = '16px Inter';
+        ctx.textAlign = 'center';
+        ctx.fillText('No test data yet', canvas.width / 2, canvas.height / 2);
+        return;
+    }
+
+    // Prepare data
+    const data = testHistory.slice(-30); // Last 30 tests
+    const maxWPM = Math.max(...data.map(t => t.wpm), 100);
+    const minWPM = Math.min(...data.map(t => t.wpm), 0);
+
+    const padding = 40;
+    const graphWidth = canvas.width - padding * 2;
+    const graphHeight = canvas.height - padding * 2;
+
+    // Draw axes
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(padding, padding);
+    ctx.lineTo(padding, canvas.height - padding);
+    ctx.lineTo(canvas.width - padding, canvas.height - padding);
+    ctx.stroke();
+
+    // Draw grid lines
+    for (let i = 0; i <= 5; i++) {
+        const y = padding + (graphHeight / 5) * i;
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+        ctx.beginPath();
+        ctx.moveTo(padding, y);
+        ctx.lineTo(canvas.width - padding, y);
+        ctx.stroke();
+
+        // Y-axis labels
+        const wpm = Math.round(maxWPM - (maxWPM - minWPM) * (i / 5));
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+        ctx.font = '12px Inter';
+        ctx.textAlign = 'right';
+        ctx.fillText(wpm, padding - 10, y + 4);
+    }
+
+    // Draw area under curve
+    ctx.fillStyle = 'rgba(255, 216, 77, 0.1)';
+    ctx.beginPath();
+    ctx.moveTo(padding, canvas.height - padding);
+
+    data.forEach((test, index) => {
+        const x = padding + (graphWidth / (data.length - 1)) * index;
+        const y = canvas.height - padding - ((test.wpm - minWPM) / (maxWPM - minWPM)) * graphHeight;
+        ctx.lineTo(x, y);
+    });
+
+    ctx.lineTo(canvas.width - padding, canvas.height - padding);
+    ctx.closePath();
+    ctx.fill();
+
+    // Draw line
+    ctx.strokeStyle = '#FFD84D';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+
+    data.forEach((test, index) => {
+        const x = padding + (graphWidth / (data.length - 1)) * index;
+        const y = canvas.height - padding - ((test.wpm - minWPM) / (maxWPM - minWPM)) * graphHeight;
+
+        if (index === 0) {
+            ctx.moveTo(x, y);
+        } else {
+            ctx.lineTo(x, y);
+        }
+    });
+
+    ctx.stroke();
+
+    // Draw points
+    data.forEach((test, index) => {
+        const x = padding + (graphWidth / (data.length - 1)) * index;
+        const y = canvas.height - padding - ((test.wpm - minWPM) / (maxWPM - minWPM)) * graphHeight;
+
+        ctx.fillStyle = '#FFD84D';
+        ctx.beginPath();
+        ctx.arc(x, y, 4, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Add glow
+        ctx.shadowColor = '#FFD84D';
+        ctx.shadowBlur = 10;
+        ctx.fill();
+        ctx.shadowBlur = 0;
+    });
+}
+
+// Render performance graph placeholder
+function renderPerformanceGraphPlaceholder() {
+    const canvas = document.getElementById('profilePerformanceGraph');
+    const ctx = canvas.getContext('2d');
+
+    // Set canvas size
+    const container = canvas.parentElement;
+    canvas.width = container.clientWidth;
+    canvas.height = 300;
+
+    // Clear canvas
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Show "Coming soon" message
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+    ctx.font = '16px Inter';
+    ctx.textAlign = 'center';
+    ctx.fillText('Performance tracking coming soon', canvas.width / 2, canvas.height / 2);
+}
+
+// Open profile view
+function openProfileView() {
+    const profileView = document.getElementById('profileView');
+    const typingContainer = document.querySelector('.container');
+
+    // Load profile data
+    loadProfileData();
+
+    // Fade out typing screen
+    if (typingContainer) {
+        typingContainer.style.opacity = '0';
+        typingContainer.style.transition = 'opacity 0.25s ease-out';
+    }
+
+    // Fade in profile view
+    setTimeout(() => {
+        profileView.classList.add('active');
+        hiddenInput.blur(); // Remove focus from typing input
+    }, 250);
+}
+
+// Close profile view
+function closeProfileView() {
+    const profileView = document.getElementById('profileView');
+    const typingContainer = document.querySelector('.container');
+
+    // Fade out profile view
+    profileView.classList.remove('active');
+
+    // Fade in typing screen
+    setTimeout(() => {
+        if (typingContainer) {
+            typingContainer.style.opacity = '1';
+        }
+        focusInput(); // Refocus typing input
+    }, 250);
+}
+
+// ============================================
+// STATS TRACKING SYSTEM
+// ============================================
+
+// Get total typing time from localStorage
+function getTotalTypingTime() {
+    return Number(localStorage.getItem('retype_total_time') || 0);
+}
+
+// Save total typing time to localStorage
+function saveTotalTypingTime(seconds) {
+    localStorage.setItem('retype_total_time', seconds);
+}
+
+// Add session time to total time
+function addSessionTime(sessionSeconds) {
+    const prev = getTotalTypingTime();
+    const newTotal = prev + sessionSeconds;
+    saveTotalTypingTime(newTotal);
+
+    // Sync to Supabase if logged in
+    syncTotalTimeToSupabase(newTotal);
+}
+
+// Sync total time to Supabase
+async function syncTotalTimeToSupabase(totalSeconds) {
+    const user = currentUser || JSON.parse(localStorage.getItem('retype_user') || 'null');
+    if (supabase && user && user.id) {
+        await supabase
+            .from('profiles')
+            .update({ total_time_typed: totalSeconds })
+            .eq('id', user.id);
+    }
+}
+
+// Get streak data
+function getStreakData() {
+    return {
+        current: Number(localStorage.getItem('retype_streak') || 0),
+        best: Number(localStorage.getItem('retype_streak_best') || 0),
+        lastActive: localStorage.getItem('retype_last_active_day') || null
+    };
+}
+
+// Update streak on activity
+function updateStreak() {
+    const today = new Date().toISOString().slice(0, 10); // "2025-11-02"
+    const streakData = getStreakData();
+    const lastActive = streakData.lastActive;
+
+    let newStreak = streakData.current;
+
+    if (lastActive === today) {
+        // Already counted today, no change
+        return;
+    }
+
+    if (lastActive) {
+        const lastDate = new Date(lastActive);
+        const todayDate = new Date(today);
+        const diffTime = todayDate - lastDate;
+        const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+
+        if (diffDays === 1) {
+            // Yesterday - continue streak
+            newStreak += 1;
+        } else {
+            // Streak broken - start new
+            newStreak = 1;
+        }
+    } else {
+        // First activity ever
+        newStreak = 1;
+    }
+
+    // Update best streak if needed
+    const newBest = Math.max(newStreak, streakData.best);
+
+    // Save to localStorage
+    localStorage.setItem('retype_streak', newStreak);
+    localStorage.setItem('retype_streak_best', newBest);
+    localStorage.setItem('retype_last_active_day', today);
+
+    // Sync to Supabase
+    syncStreakToSupabase(newStreak, newBest);
+}
+
+// Sync streak to Supabase
+async function syncStreakToSupabase(current, best) {
+    const user = currentUser || JSON.parse(localStorage.getItem('retype_user') || 'null');
+    if (supabase && user && user.id) {
+        await supabase
+            .from('profiles')
+            .update({
+                streak_current: current,
+                streak_best: best
+            })
+            .eq('id', user.id);
+    }
+}
+
+// Get activity log
+function getActivityLog() {
+    const activity = localStorage.getItem('retype_activity');
+    return activity ? JSON.parse(activity) : {};
+}
+
+// Log activity for today
+function logActivity() {
+    const today = new Date().toISOString().slice(0, 10);
+    const activity = getActivityLog();
+    activity[today] = (activity[today] || 0) + 1;
+    localStorage.setItem('retype_activity', JSON.stringify(activity));
+
+    // Sync to Supabase
+    syncActivityToSupabase(activity);
+}
+
+// Sync activity to Supabase
+async function syncActivityToSupabase(activity) {
+    const user = currentUser || JSON.parse(localStorage.getItem('retype_user') || 'null');
+    if (supabase && user && user.id) {
+        await supabase
+            .from('profiles')
+            .update({ activity_log: activity })
+            .eq('id', user.id);
+    }
+}
+
+// Get tests started/completed
+function getTestsStats() {
+    return {
+        started: Number(localStorage.getItem('retype_tests_started') || 0),
+        completed: Number(localStorage.getItem('retype_tests_completed') || 0)
+    };
+}
+
+// Increment tests started
+function incrementTestsStarted() {
+    const stats = getTestsStats();
+    const newStarted = stats.started + 1;
+    localStorage.setItem('retype_tests_started', newStarted);
+
+    // Sync to Supabase
+    syncTestsStatsToSupabase(newStarted, stats.completed);
+}
+
+// Increment tests completed
+function incrementTestsCompleted() {
+    const stats = getTestsStats();
+    const newCompleted = stats.completed + 1;
+    localStorage.setItem('retype_tests_completed', newCompleted);
+
+    // Sync to Supabase
+    syncTestsStatsToSupabase(stats.started, newCompleted);
+}
+
+// Sync tests stats to Supabase
+async function syncTestsStatsToSupabase(started, completed) {
+    const user = currentUser || JSON.parse(localStorage.getItem('retype_user') || 'null');
+    if (supabase && user && user.id) {
+        await supabase
+            .from('profiles')
+            .update({
+                tests_started: started,
+                tests_completed: completed
+            })
+            .eq('id', user.id);
+    }
+}
+
+// Format seconds to hh:mm:ss
+function formatTime(totalSeconds) {
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
 }
 
 // Sample book text - Harry Potter and the Sorcerer's Stone (first chapter excerpt)
@@ -115,6 +768,11 @@ let state = {
     currentSentenceStartTime: null,
     currentSentenceCorrectChars: 0,
     currentSentenceTotalChars: 0,
+
+    // Session time tracking
+    sessionStartTime: null,
+    sessionActiveTime: 0, // Total active typing time in seconds
+    sessionPaused: false,
 };
 
 // Caret element
@@ -154,6 +812,7 @@ const toggleAuthMode = document.getElementById('toggleAuthMode');
 const forgotPasswordLink = document.getElementById('forgotPasswordLink');
 const googleAuthBtn = document.getElementById('googleAuthBtn');
 const usernameEl = document.getElementById('username');
+const headerUser = document.getElementById('headerUser');
 const logoutDropdown = document.getElementById('logoutDropdown');
 const logoutBtn = document.getElementById('logoutBtn');
 
@@ -167,6 +826,8 @@ function init() {
     loadProgress();
     loadSettings();
     displayCurrentSentence();
+    renderNotifications(); // Render notifications on load
+    updateNotificationBadge(); // Update badge on load
     setupEventListeners();
 
     // Focus input after a short delay to ensure DOM is ready
@@ -343,6 +1004,8 @@ function handleKeyPress(typedChar) {
     // Start timer for current sentence on first keystroke
     if (state.currentSentenceStartTime === null) {
         state.currentSentenceStartTime = Date.now();
+        // Increment tests started counter
+        incrementTestsStarted();
     }
 
     // Set typing state
@@ -434,6 +1097,16 @@ function handleSentenceComplete() {
     console.log('Sentence complete! Words:', words, 'WPM:', Math.round(sentenceWPM), 'Total words:', state.totalWordsTyped);
     console.log('History length:', state.sentenceHistory.length);
 
+    // Track stats
+    const sessionSeconds = Math.floor(sentenceDuration * 60); // Convert minutes to seconds
+    addSessionTime(sessionSeconds);
+    incrementTestsCompleted();
+    updateStreak();
+    logActivity();
+
+    // Check WPM milestone
+    checkWPMMilestone(state.wpm);
+
     // Update stats one final time
     updateStats();
 
@@ -514,6 +1187,9 @@ function updateStats() {
     wpmEl.textContent = `${state.wpm} WPM`;
     accuracyEl.textContent = `Accuracy: ${state.accuracy}%`;
     totalWordsEl.textContent = `Words: ${state.totalWordsTyped}`;
+
+    // Check for WPM milestone
+    checkWPMMilestone(state.wpm);
 }
 
 // Focus hidden input - aggressive focus management
@@ -545,26 +1221,30 @@ function setupEventListeners() {
             notificationBtn.classList.remove('active');
         }
 
-        // Don't refocus if modal is open or clicking on modal/panel elements
-        if (isModalOpen) return;
+        // Don't refocus if modal is open or profile view is active
+        const profileView = document.getElementById('profileView');
+        if (isModalOpen || (profileView && profileView.classList.contains('active'))) return;
 
         if (!e.target.closest('.modal-content') &&
             !e.target.closest('.auth-modal') &&
             !e.target.closest('button') &&
-            !e.target.closest('.notification-panel')) {
+            !e.target.closest('.notification-panel') &&
+            !e.target.closest('.profile-view')) {
             focusInput();
         }
     });
 
     // Also handle mousedown to catch focus before it's lost
     document.addEventListener('mousedown', (e) => {
-        // Don't refocus if modal is open
-        if (isModalOpen) return;
+        // Don't refocus if modal is open or profile view is active
+        const profileView = document.getElementById('profileView');
+        if (isModalOpen || (profileView && profileView.classList.contains('active'))) return;
 
         if (!e.target.closest('.modal-content') &&
             !e.target.closest('.auth-modal') &&
             !e.target.closest('button') &&
             !e.target.closest('.notification-panel') &&
+            !e.target.closest('.profile-view') &&
             e.target !== hiddenInput) {
             // Refocus after mousedown completes
             setTimeout(() => focusInput(), 0);
@@ -574,8 +1254,12 @@ function setupEventListeners() {
     // Prevent input from losing focus - aggressive refocus
     hiddenInput.addEventListener('blur', () => {
         console.log('Input lost focus, refocusing...');
-        // Don't refocus if modal is open or if any modal/panel is active
-        if (isModalOpen || document.querySelector('.modal.active') || notificationPanel.classList.contains('active')) {
+        // Don't refocus if modal is open, profile view is active, or if any modal/panel is active
+        const profileView = document.getElementById('profileView');
+        if (isModalOpen ||
+            (profileView && profileView.classList.contains('active')) ||
+            document.querySelector('.modal.active') ||
+            notificationPanel.classList.contains('active')) {
             return;
         }
         // Use multiple methods to ensure focus is regained
@@ -586,8 +1270,12 @@ function setupEventListeners() {
 
     // Periodically check focus (safety net)
     setInterval(() => {
-        // Don't refocus if modal is open or any panel is active
-        if (isModalOpen || document.querySelector('.modal.active') || notificationPanel.classList.contains('active')) {
+        // Don't refocus if modal is open, profile view is active, or any panel is active
+        const profileView = document.getElementById('profileView');
+        if (isModalOpen ||
+            (profileView && profileView.classList.contains('active')) ||
+            document.querySelector('.modal.active') ||
+            notificationPanel.classList.contains('active')) {
             return;
         }
         if (document.activeElement !== hiddenInput) {
@@ -679,6 +1367,9 @@ function setupEventListeners() {
             notificationPanel.classList.add('active');
             notificationBtn.classList.add('active');
             hiddenInput.blur(); // Temporarily blur to allow panel interaction
+
+            // Mark all notifications as read when panel opens
+            markAllNotificationsAsRead();
         }
     });
 
@@ -902,18 +1593,61 @@ function setupEventListeners() {
         alert('Google authentication coming soon!');
     });
 
-    // Username dropdown toggle
-    usernameEl.addEventListener('click', (e) => {
-        e.stopPropagation();
-        logoutDropdown.classList.toggle('active');
-    });
+    // Header user click - open profile
+    if (headerUser) {
+        headerUser.addEventListener('click', (e) => {
+            e.stopPropagation();
+            openProfileView();
+        });
+    }
 
     // Close dropdown when clicking outside
     document.addEventListener('click', (e) => {
-        if (!e.target.closest('.username-container')) {
+        if (!e.target.closest('.header-user')) {
             logoutDropdown.classList.remove('active');
         }
     });
+
+    // Profile back button
+    const profileBackBtn = document.getElementById('profileBackBtn');
+    if (profileBackBtn) {
+        profileBackBtn.addEventListener('click', () => {
+            closeProfileView();
+        });
+    }
+
+    // Bio edit button
+    const bioEditBtn = document.getElementById('profileBioEditBtn');
+    const bioText = document.getElementById('profileBioText');
+    const bioTextarea = document.getElementById('profileBioTextarea');
+    const bioSaveBtn = document.getElementById('profileBioSaveBtn');
+
+    if (bioEditBtn && bioText && bioTextarea && bioSaveBtn) {
+        bioEditBtn.addEventListener('click', () => {
+            // Enter edit mode
+            bioTextarea.value = bioText.textContent === 'No bio yet. Click the edit button to add one!'
+                ? ''
+                : bioText.textContent;
+            bioText.style.display = 'none';
+            bioTextarea.style.display = 'block';
+            bioSaveBtn.style.display = 'block';
+            bioTextarea.focus();
+        });
+
+        bioSaveBtn.addEventListener('click', async () => {
+            // Save bio
+            const newBio = bioTextarea.value.trim();
+            const displayBio = newBio || 'No bio yet. Click the edit button to add one!';
+
+            bioText.textContent = displayBio;
+            await saveProfileBio(newBio);
+
+            // Exit edit mode
+            bioText.style.display = 'block';
+            bioTextarea.style.display = 'none';
+            bioSaveBtn.style.display = 'none';
+        });
+    }
 
     // Logout
     logoutBtn.addEventListener('click', async () => {
@@ -1023,6 +1757,19 @@ async function handleSignup(email, password, username) {
 
     localStorage.setItem('retype_user', JSON.stringify(userData));
     currentUser = userData;
+
+    // Add welcome notifications
+    addNotification(
+        'Welcome to ReType!',
+        'Your account has been created.',
+        'just now'
+    );
+
+    addNotification(
+        'Verify your account',
+        'Check your email to confirm your account.',
+        'just now'
+    );
 
     // Update UI
     updateHeaderForLoggedInUser(userData.username, userData.level);

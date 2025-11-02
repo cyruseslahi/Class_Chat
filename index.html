@@ -46,24 +46,25 @@
 
             <!-- User Section (shown when logged in) -->
             <div class="user-section" id="userSection">
-                <button class="header-icon" id="notificationBtn" aria-label="Notifications">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
-                        <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
-                    </svg>
-                </button>
-
-                <div class="username-container">
-                    <span class="username" id="username">Cyrus-E</span>
-                    <!-- Logout Dropdown -->
-                    <div class="logout-dropdown" id="logoutDropdown">
-                        <div class="dropdown-item disabled">Profile</div>
-                        <div class="dropdown-item" id="logoutBtn">Log out</div>
-                    </div>
+                <div class="notif-container">
+                    <button class="header-icon notifications" id="notificationBtn" aria-label="Notifications">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                            <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+                        </svg>
+                    </button>
+                    <span class="notif-badge" id="notificationBadge" style="display: none;">0</span>
                 </div>
 
-                <div class="level-badge" id="levelBadge">
-                    <span id="levelNumber">46</span>
+                <div class="header-user" id="headerUser">
+                    <span class="user-name" id="username">Cyrus-E</span>
+                    <span class="user-level" id="levelBadge">46</span>
+                </div>
+
+                <!-- Logout Dropdown (hidden by default) -->
+                <div class="logout-dropdown" id="logoutDropdown">
+                    <div class="dropdown-item disabled">Profile</div>
+                    <div class="dropdown-item" id="logoutBtn">Log out</div>
                 </div>
             </div>
         </div>
@@ -125,28 +126,8 @@
     <!-- Notification Panel -->
     <div class="notification-panel" id="notificationPanel">
         <h3 class="notification-title">Notifications</h3>
-        <div class="notification-list">
-            <div class="notification-item">
-                <div class="notification-icon">🎯</div>
-                <div class="notification-content">
-                    <p class="notification-text">You've completed 10 sentences!</p>
-                    <span class="notification-time">2 hours ago</span>
-                </div>
-            </div>
-            <div class="notification-item">
-                <div class="notification-icon">⚡</div>
-                <div class="notification-content">
-                    <p class="notification-text">New personal best: 65 WPM</p>
-                    <span class="notification-time">5 hours ago</span>
-                </div>
-            </div>
-            <div class="notification-item">
-                <div class="notification-icon">📚</div>
-                <div class="notification-content">
-                    <p class="notification-text">Keep up the great work!</p>
-                    <span class="notification-time">1 day ago</span>
-                </div>
-            </div>
+        <div class="notification-list" id="notificationList">
+            <!-- Notifications will be dynamically rendered here -->
         </div>
     </div>
 
@@ -210,6 +191,138 @@
                     </svg>
                     Log in with Google
                 </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Profile View -->
+    <div class="profile-view" id="profileView">
+        <div class="profile-container">
+            <!-- Back Button -->
+            <button class="profile-back-btn" id="profileBackBtn" aria-label="Back to typing">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M19 12H5M12 19l-7-7 7-7"/>
+                </svg>
+                Back to typing
+            </button>
+
+            <!-- Profile Header -->
+            <div class="profile-header">
+                <div class="profile-avatar">
+                    <div class="avatar-placeholder">
+                        <span id="profileAvatarInitial">C</span>
+                    </div>
+                </div>
+
+                <div class="profile-info">
+                    <div class="profile-name-row">
+                        <h1 class="profile-username" id="profileUsername">Cyrus-E</h1>
+                        <span class="profile-level-badge" id="profileLevelBadge">46</span>
+                    </div>
+
+                    <div class="profile-meta">
+                        <span class="profile-meta-item">
+                            <span class="meta-label">Joined:</span>
+                            <span class="meta-value" id="profileJoinDate">Jan 2024</span>
+                        </span>
+                        <span class="profile-meta-item">
+                            <span class="meta-label">Streak:</span>
+                            <span class="meta-value" id="profileStreak">0 days</span>
+                        </span>
+                        <span class="profile-meta-item">
+                            <span class="meta-label">Time typing:</span>
+                            <span class="meta-value" id="profileTotalTime">00:00:00</span>
+                        </span>
+                    </div>
+
+                    <div class="profile-stats-row">
+                        <div class="profile-stat-item">
+                            <span class="stat-value" id="profileTestsStarted">0</span>
+                            <span class="stat-label">tests started</span>
+                        </div>
+                        <div class="profile-stat-item">
+                            <span class="stat-value" id="profileTestsCompleted">0</span>
+                            <span class="stat-label">tests completed</span>
+                        </div>
+                        <div class="profile-stat-item">
+                            <span class="stat-value" id="profileAvgWPM">0</span>
+                            <span class="stat-label">avg wpm</span>
+                        </div>
+                    </div>
+
+                    <!-- XP Progress Bar -->
+                    <div class="profile-xp-container">
+                        <div class="profile-xp-label">
+                            <span>Level progress</span>
+                            <span id="profileXPText">0 / 1000 XP</span>
+                        </div>
+                        <div class="profile-xp-bar">
+                            <div class="profile-xp-fill" id="profileXPFill" style="width: 0%;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bio Section -->
+            <div class="profile-bio-section">
+                <div class="profile-bio-header">
+                    <h2 class="profile-section-title">Bio</h2>
+                    <button class="profile-bio-edit-btn" id="profileBioEditBtn" aria-label="Edit bio">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                        </svg>
+                    </button>
+                </div>
+                <div class="profile-bio-content" id="profileBioContent">
+                    <p class="profile-bio-text" id="profileBioText">No bio yet. Click the edit button to add one!</p>
+                    <textarea class="profile-bio-textarea" id="profileBioTextarea" style="display: none;" placeholder="Write something about yourself..."></textarea>
+                    <button class="profile-bio-save-btn" id="profileBioSaveBtn" style="display: none;">Save</button>
+                </div>
+            </div>
+
+            <!-- Stats Overview -->
+            <div class="profile-stats-section">
+                <h2 class="profile-section-title">Personal Bests</h2>
+                <div class="profile-stats-grid" id="profileStatsGrid">
+                    <!-- Stats cards will be dynamically generated -->
+                    <div class="profile-stat-card">
+                        <div class="stat-card-time">15 seconds</div>
+                        <div class="stat-card-wpm">--</div>
+                        <div class="stat-card-acc">--% acc</div>
+                    </div>
+                    <div class="profile-stat-card">
+                        <div class="stat-card-time">30 seconds</div>
+                        <div class="stat-card-wpm">--</div>
+                        <div class="stat-card-acc">--% acc</div>
+                    </div>
+                    <div class="profile-stat-card">
+                        <div class="stat-card-time">60 seconds</div>
+                        <div class="stat-card-wpm">--</div>
+                        <div class="stat-card-acc">--% acc</div>
+                    </div>
+                    <div class="profile-stat-card">
+                        <div class="stat-card-time">120 seconds</div>
+                        <div class="stat-card-wpm">--</div>
+                        <div class="stat-card-acc">--% acc</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Activity Heatmap -->
+            <div class="profile-heatmap-section">
+                <h2 class="profile-section-title">Activity</h2>
+                <div class="profile-heatmap" id="profileHeatmap">
+                    <!-- Heatmap will be dynamically generated -->
+                </div>
+            </div>
+
+            <!-- Performance Graph -->
+            <div class="profile-graph-section">
+                <h2 class="profile-section-title">Performance over time</h2>
+                <div class="profile-graph-container">
+                    <canvas id="profilePerformanceGraph" width="800" height="300"></canvas>
+                </div>
             </div>
         </div>
     </div>
