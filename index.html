@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ReType | Minimalistic Typing Tests</title>
+    <title>ReType</title>
 
     <!-- Favicon -->
     <link rel="icon" type="image/png" href="favicon.png">
@@ -69,6 +69,65 @@
             </div>
         </div>
     </header>
+
+    <!-- Mode Customization Bar (Absolutely Positioned) -->
+    <div id="mode-bar-wrapper">
+        <div class="mode-bar" id="modeBar">
+            <!-- Time Mode -->
+            <div class="mode-item" id="modeTime" data-mode="time">
+                <span class="mode-icon">🕒</span>
+                <span class="mode-label">time</span>
+            </div>
+
+            <!-- Words Mode -->
+            <div class="mode-item" id="modeWords" data-mode="words">
+                <span class="mode-icon">A</span>
+                <span class="mode-label">words</span>
+            </div>
+
+            <!-- Book Mode -->
+            <div class="mode-item" id="modeBook" data-mode="book">
+                <span class="mode-icon">📚</span>
+                <span class="mode-label">book</span>
+            </div>
+
+            <!-- Zen Mode -->
+            <div class="mode-item" id="modeZen" data-mode="zen">
+                <span class="mode-icon">▲</span>
+                <span class="mode-label">zen</span>
+            </div>
+
+            <!-- Custom Mode -->
+            <div class="mode-item" id="modeCustom" data-mode="custom">
+                <span class="mode-icon">🔧</span>
+                <span class="mode-label">custom</span>
+            </div>
+        </div>
+
+        <!-- Sub-menus for modes -->
+        <div class="mode-submenu" id="submenuTime">
+            <div class="submenu-option" data-value="15">15</div>
+            <div class="submenu-option" data-value="30">30</div>
+            <div class="submenu-option" data-value="60">60</div>
+            <div class="submenu-option" data-value="custom">custom</div>
+        </div>
+
+        <div class="mode-submenu" id="submenuWords">
+            <div class="submenu-option" data-value="10">10</div>
+            <div class="submenu-option" data-value="25">25</div>
+            <div class="submenu-option" data-value="50">50</div>
+            <div class="submenu-option" data-value="custom">custom</div>
+        </div>
+
+        <div class="mode-submenu mode-dropdown" id="submenuBook">
+            <div class="dropdown-title">Choose a book</div>
+            <div class="dropdown-option" data-value="harry-potter">Harry Potter and the Philosopher's Stone</div>
+        </div>
+
+        <div class="mode-submenu mode-placeholder" id="submenuCustom">
+            <div class="placeholder-text">Custom mode coming soon</div>
+        </div>
+    </div>
 
     <!-- Main Content -->
     <main>

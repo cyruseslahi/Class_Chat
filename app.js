@@ -707,6 +707,186 @@ function formatTime(totalSeconds) {
     return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
 }
 
+// ============================================
+// MODE CUSTOMIZATION SYSTEM
+// ============================================
+
+// Get current mode settings
+function getModeSettings() {
+    return {
+        mode: localStorage.getItem('retype_mode') || 'book',
+        value: localStorage.getItem('retype_value') || 'harry-potter'
+    };
+}
+
+// Save mode settings
+function saveModeSettings(mode, value) {
+    localStorage.setItem('retype_mode', mode);
+    localStorage.setItem('retype_value', value);
+}
+
+// Initialize mode bar
+function initModeBar() {
+    const modeItems = document.querySelectorAll('.mode-item');
+    const submenus = document.querySelectorAll('.mode-submenu');
+
+    // Load saved mode
+    const settings = getModeSettings();
+    setActiveMode(settings.mode, settings.value);
+
+    // Mode item click handlers
+    modeItems.forEach(item => {
+        item.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const mode = item.dataset.mode;
+
+            // Close all submenus first
+            closeAllSubmenus();
+
+            // Handle different modes
+            if (mode === 'zen') {
+                // Zen mode - no submenu, just activate
+                setActiveMode('zen', null);
+                saveModeSettings('zen', null);
+                applyZenMode();
+            } else if (mode === 'custom') {
+                // Custom mode - show placeholder
+                const submenu = document.getElementById('submenuCustom');
+                positionSubmenu(submenu, item);
+                submenu.classList.add('active');
+            } else {
+                // Time, Words, Book - show submenu
+                const submenu = document.getElementById(`submenu${mode.charAt(0).toUpperCase() + mode.slice(1)}`);
+                positionSubmenu(submenu, item);
+                submenu.classList.add('active');
+            }
+        });
+    });
+
+    // Submenu option click handlers
+    document.querySelectorAll('.submenu-option').forEach(option => {
+        option.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const value = option.dataset.value;
+            const submenu = option.closest('.mode-submenu');
+            const mode = submenu.id.replace('submenu', '').toLowerCase();
+
+            if (value === 'custom') {
+                // TODO: Show custom input modal
+                console.log('Custom value input coming soon');
+                return;
+            }
+
+            setActiveMode(mode, value);
+            saveModeSettings(mode, value);
+            applyMode(mode, value);
+            closeAllSubmenus();
+        });
+    });
+
+    // Book dropdown option click handler
+    document.querySelectorAll('.dropdown-option').forEach(option => {
+        option.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const value = option.dataset.value;
+
+            setActiveMode('book', value);
+            saveModeSettings('book', value);
+            applyMode('book', value);
+            closeAllSubmenus();
+        });
+    });
+
+    // Close submenus when clicking outside
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('.mode-submenu') && !e.target.closest('.mode-item')) {
+            closeAllSubmenus();
+        }
+    });
+}
+
+// Position submenu below mode item
+function positionSubmenu(submenu, modeItem) {
+    const rect = modeItem.getBoundingClientRect();
+    submenu.style.left = `${rect.left}px`;
+    submenu.style.top = `${rect.bottom + 8}px`;
+}
+
+// Close all submenus
+function closeAllSubmenus() {
+    document.querySelectorAll('.mode-submenu').forEach(submenu => {
+        submenu.classList.remove('active');
+    });
+}
+
+// Set active mode visually
+function setActiveMode(mode, value) {
+    // Update mode items
+    document.querySelectorAll('.mode-item').forEach(item => {
+        item.classList.remove('active');
+    });
+
+    const activeItem = document.querySelector(`.mode-item[data-mode="${mode}"]`);
+    if (activeItem) {
+        activeItem.classList.add('active');
+    }
+
+    // Update submenu options
+    document.querySelectorAll('.submenu-option, .dropdown-option').forEach(option => {
+        option.classList.remove('active');
+    });
+
+    if (value) {
+        const activeOption = document.querySelector(`.submenu-option[data-value="${value}"], .dropdown-option[data-value="${value}"]`);
+        if (activeOption) {
+            activeOption.classList.add('active');
+        }
+    }
+}
+
+// Apply mode to typing session
+function applyMode(mode, value) {
+    console.log(`Applying mode: ${mode}, value: ${value}`);
+
+    // Reset typing state
+    resetTypingState();
+
+    switch (mode) {
+        case 'time':
+            // TODO: Implement time-based mode
+            console.log(`Time mode: ${value} seconds`);
+            break;
+        case 'words':
+            // TODO: Implement word-based mode
+            console.log(`Words mode: ${value} words`);
+            break;
+        case 'book':
+            // Book mode is default - already implemented
+            console.log(`Book mode: ${value}`);
+            displayCurrentSentence();
+            break;
+        case 'zen':
+            applyZenMode();
+            break;
+    }
+}
+
+// Apply zen mode
+function applyZenMode() {
+    console.log('Zen mode activated');
+    // TODO: Hide timer, notifications, etc.
+    // For now, just display current sentence
+    displayCurrentSentence();
+}
+
+// Reset typing state
+function resetTypingState() {
+    state.currentCharIndex = 0;
+    state.currentSentenceStartTime = null;
+    state.currentSentenceCorrectChars = 0;
+    state.currentSentenceTotalChars = 0;
+}
+
 // Sample book text - Harry Potter and the Sorcerer's Stone (first chapter excerpt)
 const bookTextRaw = [
     "While Mrs. Dursley was in the bathroom, Mr. Dursley crept to the bedroom window and peered down into the front garden.",
@@ -825,6 +1005,7 @@ function init() {
     checkAuthState(); // Check if user is logged in
     loadProgress();
     loadSettings();
+    initModeBar(); // Initialize mode customization bar
     displayCurrentSentence();
     renderNotifications(); // Render notifications on load
     updateNotificationBadge(); // Update badge on load
