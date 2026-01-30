@@ -357,8 +357,10 @@ function renderFriends(friends) {
     </div>
   `).join('');
   
-  // Attach click handlers after rendering
-  attachFriendClickHandlers();
+  // Attach click handlers after rendering (use setTimeout to ensure DOM is ready)
+  setTimeout(() => {
+    attachFriendClickHandlers();
+  }, 0);
 }
 
 /**
@@ -378,15 +380,29 @@ function attachFriendClickHandlers() {
       e.stopPropagation();
       
       const friendId = item.dataset.friendId;
+      console.log('attachFriendClickHandlers: Click detected', {
+        friendId,
+        dataset: item.dataset,
+        hasFriendId: !!friendId
+      });
+      
       if (!friendId) {
-        console.error('attachFriendClickHandlers: No friendId found');
+        console.error('attachFriendClickHandlers: No friendId found in dataset', item.dataset);
         return;
       }
       
       console.log('Friend clicked:', friendId);
-      await openOrCreateConversation(friendId);
-      setActiveFriendItem(item);
+      try {
+        await openOrCreateConversation(friendId);
+        setActiveFriendItem(item);
+      } catch (error) {
+        console.error('Error opening conversation:', error);
+        alert('Error opening chat: ' + (error.message || 'Unknown error'));
+      }
     });
+    
+    // Make item visually clickable
+    item.style.cursor = 'pointer';
   });
 }
 
@@ -494,6 +510,13 @@ window.handleAcceptRequest = async function(friendshipId) {
 async function openOrCreateConversation(friendId) {
   if (!currentUser) {
     console.error('openOrCreateConversation: No current user');
+    alert('Error: Not logged in. Please refresh the page.');
+    return;
+  }
+  
+  if (!friendId) {
+    console.error('openOrCreateConversation: No friendId provided');
+    alert('Error: No friend selected.');
     return;
   }
   
@@ -525,18 +548,24 @@ async function openOrCreateConversation(friendId) {
   console.log('openOrCreateConversation: UI elements check', {
     emptyState: !!emptyState,
     chatActive: !!chatActive,
-    friendNameEl: !!friendNameEl,
-    messagesView: !!messagesView,
-    messagesViewActive: messagesView?.classList.contains('active')
+    friendNameEl: !!friendNameEl
   });
   
-  if (!emptyState || !chatActive || !friendNameEl) {
-    console.error('openOrCreateConversation: Critical UI elements missing!', {
-      emptyState: !!emptyState,
-      chatActive: !!chatActive,
-      friendNameEl: !!friendNameEl
-    });
-    alert('Error: Chat UI elements not found. Please refresh the page.');
+  if (!emptyState) {
+    console.error('openOrCreateConversation: dm-empty-state element not found');
+    alert('Error: Chat UI not found. Please refresh the page.');
+    return;
+  }
+  
+  if (!chatActive) {
+    console.error('openOrCreateConversation: dm-chat-active element not found');
+    alert('Error: Chat UI not found. Please refresh the page.');
+    return;
+  }
+  
+  if (!friendNameEl) {
+    console.error('openOrCreateConversation: dm-friend-name element not found');
+    alert('Error: Chat UI not found. Please refresh the page.');
     return;
   }
   
@@ -544,6 +573,8 @@ async function openOrCreateConversation(friendId) {
   emptyState.style.display = 'none';
   chatActive.style.display = 'flex';
   friendNameEl.textContent = friendName;
+  
+  console.log('openOrCreateConversation: UI updated successfully');
   
   console.log('openOrCreateConversation: UI updated', {
     emptyStateHidden: emptyState.style.display === 'none',
