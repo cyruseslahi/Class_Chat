@@ -11,12 +11,9 @@ import {
   countKnownProfiles
 } from "./friends.js";
 
-// Global variables for chat
+// Global variables
 let currentUser = null;
 let currentProfile = null;
-let messagesChannel = null;
-let typingChannel = null;
-let typingTimeoutId = null;
 
 // Global variables for DMs
 let currentDmConversationId = null;
@@ -45,11 +42,8 @@ getCurrentUser().then(async (user) => {
     currentProfile = profile;
     displayProfile(profile);
     
-    // Initialize chat after profile is loaded
-    initializeChat();
-    
-    // Set up tab switching
-    setupTabSwitching();
+    // Initialize private messaging system
+    initializeDMs();
     
     // Set up Add Friends modal
     setupAddFriendsModal();
@@ -112,12 +106,6 @@ function displayProfile(profile) {
   document.getElementById("logoutBtn").addEventListener("click", async () => {
     try {
       // Unsubscribe from real-time channels before logging out
-      if (messagesChannel) {
-        await supabase.removeChannel(messagesChannel);
-      }
-      if (typingChannel) {
-        await supabase.removeChannel(typingChannel);
-      }
       if (dmMessagesChannel) {
         await supabase.removeChannel(dmMessagesChannel);
       }
@@ -130,280 +118,11 @@ function displayProfile(profile) {
 }
 
 /**
- * Initialize chat functionality
+ * Initialize private messaging system
  */
-async function initializeChat() {
-  // Clean up old messages (keep only the 12 most recent)
-  await cleanupOldMessages();
-  
-  // Load initial messages
-  await loadMessages();
-  
-  // Set up real-time subscription
-  setupRealtimeSubscription();
-  
-  // Set up typing indicator
-  setupTypingChannel();
-  
-  // Set up message form handler
-  setupMessageForm();
-}
-
-/**
- * Delete all messages except the 12 most recent ones
- */
-async function cleanupOldMessages() {
-  try {
-    // Get the 12 most recent messages to find the cutoff timestamp
-    const { data: recentMessages, error: selectError } = await supabase
-      .from('messages')
-      .select('id, created_at')
-      .order('created_at', { ascending: false })
-      .limit(12);
-    
-    if (selectError) {
-      console.error('Error fetching recent messages for cleanup:', selectError);
-      return;
-    }
-    
-    // If there are 12 or fewer messages, no cleanup needed
-    if (!recentMessages || recentMessages.length < 12) {
-      return;
-    }
-    
-    // Get the timestamp of the 12th most recent message (oldest in our keep list)
-    const oldestKeptMessage = recentMessages[recentMessages.length - 1];
-    const cutoffTime = oldestKeptMessage.created_at;
-    
-    // Delete all messages older than the cutoff time
-    const { error: deleteError } = await supabase
-      .from('messages')
-      .delete()
-      .lt('created_at', cutoffTime);
-    
-    if (deleteError) {
-      console.error('Error deleting old messages:', deleteError);
-    } else {
-      console.log('Successfully cleaned up old messages');
-    }
-  } catch (error) {
-    console.error('Exception during message cleanup:', error);
-  }
-}
-
-/**
- * Load initial messages from database
- */
-async function loadMessages() {
-  const messagesContainer = document.getElementById("messages");
-  
-  // Load only the 12 most recent messages (ordered by newest first, then reverse for display)
-  const { data, error } = await supabase
-    .from('messages')
-    .select('*')
-    .order('created_at', { ascending: false })
-    .limit(12);
-  
-  if (error) {
-    console.error('Load messages error:', error);
-    return;
-  }
-  
-  messagesContainer.innerHTML = '';
-  
-  if (data && data.length > 0) {
-    // Reverse the array so newest messages appear at the bottom
-    const reversedData = data.reverse();
-    reversedData.forEach(message => {
-      appendMessage(message, false); // Don't auto-scroll during initial load
-    });
-  }
-  
-  // Force scroll to bottom after initial load
-  scrollToBottom(true);
-}
-
-/**
- * Set up real-time subscription for new messages
- */
-function setupRealtimeSubscription() {
-  messagesChannel = supabase
-    .channel('messages-channel')
-    .on(
-      'postgres_changes',
-      { event: 'INSERT', schema: 'public', table: 'messages' },
-      (payload) => {
-        console.log('Realtime message:', payload.new);
-        appendMessage(payload.new); // Will auto-scroll if user is near bottom
-      }
-    )
-    .subscribe();
-}
-
-/**
- * Set up message form submission handler
- */
-function setupMessageForm() {
-  const form = document.getElementById("message-form");
-  const input = document.getElementById("message-input");
-  
-  form.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    
-    const text = input.value.trim();
-    if (!text) return;
-    
-    // Enforce character limit (750 characters)
-    if (text.length > 750) {
-      alert('Message is too long. Maximum 750 characters allowed.');
-      input.value = text.substring(0, 750);
-      return;
-    }
-    
-    // Make sure we have user from auth
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
-    
-    if (userError || !user) {
-      console.error("No user", userError);
-      return;
-    }
-    
-    // Profile.display_name should be loaded earlier and stored in a variable
-    if (!currentProfile || !currentProfile.display_name) {
-      console.error("No profile loaded");
-      return;
-    }
-    
-    const { data, error } = await supabase
-      .from("messages")
-      .insert({
-        user_id: user.id,
-        display_name: currentProfile.display_name,
-        content: text,
-      })
-      .select()
-      .single();
-    
-    if (error) {
-      console.error("Insert message error:", error);
-      return;
-    }
-    
-    // Optimistically append the message immediately (force scroll for own messages)
-    appendMessage(data, true);
-    
-    // Clear input
-    input.value = "";
-  });
-}
-
-/**
- * Append a single message to the chat
- * @param {Object} message - Message object with id, user_id, display_name, content, created_at
- * @param {boolean} autoScroll - Whether to auto-scroll after appending (default: true)
- */
-function appendMessage(message, autoScroll = true) {
-  const messagesContainer = document.getElementById("messages");
-  
-  // Check if message already exists (to prevent duplicates from optimistic updates + real-time)
-  const existingMessage = messagesContainer.querySelector(`[data-message-id="${message.id}"]`);
-  if (existingMessage) {
-    return;
-  }
-  
-  const isMine = message.user_id === currentUser.id;
-  
-  // Create message row
-  const messageRow = document.createElement("div");
-  messageRow.className = `message-row ${isMine ? 'mine' : 'other'}`;
-  messageRow.setAttribute('data-message-id', message.id);
-  
-  // Create message bubble
-  const messageBubble = document.createElement("div");
-  messageBubble.className = "message-bubble";
-  
-  // Create message meta (name + time)
-  const messageMeta = document.createElement("div");
-  messageMeta.className = "message-meta";
-  
-  // Format time
-  const date = new Date(message.created_at);
-  const timeString = date.toLocaleTimeString('en-US', { 
-    hour: '2-digit', 
-    minute: '2-digit',
-    hour12: false 
-  });
-  
-  messageMeta.innerHTML = `
-    <span class="message-name">${escapeHtml(message.display_name)}</span>
-    <span class="message-time">${timeString}</span>
-  `;
-  
-  // Create message content
-  const messageContent = document.createElement("div");
-  messageContent.className = "message-content";
-  messageContent.textContent = message.content;
-  
-  // Assemble message bubble
-  messageBubble.appendChild(messageMeta);
-  messageBubble.appendChild(messageContent);
-  
-  // Assemble message row
-  messageRow.appendChild(messageBubble);
-  
-  // Append to container
-  messagesContainer.appendChild(messageRow);
-  
-  // Auto-scroll to bottom after appending message
-  // Always scroll for own messages, otherwise only if near bottom
-  if (autoScroll) {
-    scrollToBottom(isMine); // Force scroll for own messages
-  }
-}
-
-/**
- * Check if user is near the bottom of the messages container
- * @returns {boolean} - True if user is within 100px of the bottom
- */
-function isNearBottom() {
-  const messagesContainer = document.getElementById('messages');
-  if (!messagesContainer) return true;
-  
-  const threshold = 100; // pixels from bottom
-  const scrollTop = messagesContainer.scrollTop;
-  const scrollHeight = messagesContainer.scrollHeight;
-  const clientHeight = messagesContainer.clientHeight;
-  
-  return (scrollHeight - scrollTop - clientHeight) < threshold;
-}
-
-/**
- * Scroll chat messages to bottom
- * @param {boolean} force - If true, always scroll regardless of position
- */
-function scrollToBottom(force = false) {
-  const messagesContainer = document.getElementById('messages');
-  if (!messagesContainer) return;
-  
-  // If not forced, only scroll if user is already near bottom
-  if (!force && !isNearBottom()) {
-    return;
-  }
-  
-  // Ensure we have content to scroll to
-  if (messagesContainer.scrollHeight <= messagesContainer.clientHeight) {
-    return;
-  }
-  
-  // Use setTimeout to ensure DOM is updated, then requestAnimationFrame for smooth scroll
-  setTimeout(() => {
-    requestAnimationFrame(() => {
-      messagesContainer.scrollTop = messagesContainer.scrollHeight;
-    });
-  }, 10);
+async function initializeDMs() {
+  // Load friends UI immediately
+  await loadFriendsUI();
 }
 
 /**
@@ -417,86 +136,6 @@ function escapeHtml(text) {
   return div.innerHTML;
 }
 
-/**
- * Set up typing indicator channel
- */
-function setupTypingChannel() {
-  const typingIndicator = document.getElementById("typing-indicator");
-  const input = document.getElementById("message-input");
-  
-  typingChannel = supabase.channel("typing-channel", {
-    config: {
-      broadcast: { self: false },
-    },
-  });
-  
-  typingChannel
-    .on("broadcast", { event: "typing" }, () => {
-      showTypingIndicator(typingIndicator);
-    })
-    .subscribe();
-  
-  let lastTypingSent = 0;
-  const TYPING_INTERVAL = 1500; // ms
-  
-  input.addEventListener("input", () => {
-    const now = Date.now();
-    if (now - lastTypingSent < TYPING_INTERVAL) return;
-    lastTypingSent = now;
-    
-    typingChannel.send({
-      type: "broadcast",
-      event: "typing",
-      payload: {},
-    });
-  });
-}
-
-/**
- * Show typing indicator
- * @param {HTMLElement} typingIndicator - The typing indicator element
- */
-function showTypingIndicator(typingIndicator) {
-  if (!typingIndicator) return;
-  
-  typingIndicator.style.display = "block";
-  
-  if (typingTimeoutId) clearTimeout(typingTimeoutId);
-  
-  typingTimeoutId = setTimeout(() => {
-    typingIndicator.style.display = "none";
-  }, 3000);
-}
-
-/**
- * Set up tab switching between Global and Messages
- */
-function setupTabSwitching() {
-  const tabs = document.querySelectorAll('.chat-tab');
-  const globalView = document.getElementById('global-chat-view');
-  const messagesView = document.getElementById('messages-view');
-  
-  tabs.forEach(tab => {
-    tab.addEventListener('click', () => {
-      const tabName = tab.dataset.tab;
-      
-      // Update active tab
-      tabs.forEach(t => t.classList.remove('active'));
-      tab.classList.add('active');
-      
-      // Show/hide views
-      if (tabName === 'global') {
-        globalView.classList.add('active');
-        messagesView.classList.remove('active');
-      } else {
-        globalView.classList.remove('active');
-        messagesView.classList.add('active');
-        // Load friends UI when Messages tab is activated
-        loadFriendsUI();
-      }
-    });
-  });
-}
 
 /**
  * Set up Add Friends modal
@@ -860,26 +499,6 @@ async function openOrCreateConversation(friendId) {
   
   console.log('openOrCreateConversation: Starting for friendId', friendId);
   
-  // Ensure Messages tab is active FIRST - before anything else
-  const messagesTab = document.querySelector('.chat-tab[data-tab="messages"]');
-  const globalView = document.getElementById('global-chat-view');
-  const messagesView = document.getElementById('messages-view');
-  
-  if (messagesTab && !messagesTab.classList.contains('active')) {
-    // Switch to Messages tab
-    document.querySelectorAll('.chat-tab').forEach(t => t.classList.remove('active'));
-    messagesTab.classList.add('active');
-    
-    if (globalView) globalView.classList.remove('active');
-    if (messagesView) {
-      messagesView.classList.add('active');
-      console.log('openOrCreateConversation: Activated messages-view');
-    }
-    
-    // Load friends UI
-    await loadFriendsUI();
-  }
-  
   // Get friend's profile for display name FIRST
   let friendName = 'Unknown';
   try {
@@ -1058,11 +677,13 @@ async function loadDmMessages() {
   
   console.log('loadDmMessages: Loading messages for conversation', currentDmConversationId);
   
+  // Load only the 12 most recent messages (ordered by newest first, then reverse for display)
   const { data, error } = await supabase
     .from('dm_messages')
     .select('*')
     .eq('conversation_id', currentDmConversationId)
-    .order('created_at', { ascending: true });
+    .order('created_at', { ascending: false })
+    .limit(12);
   
   if (error) {
     console.error('load dm messages error', error);
@@ -1074,9 +695,11 @@ async function loadDmMessages() {
   container.innerHTML = '';
   
   if (data && data.length > 0) {
-    data.forEach(message => {
+    // Reverse the array so newest messages appear at the bottom
+    const reversedData = data.reverse();
+    reversedData.forEach(message => {
       console.log('loadDmMessages: Appending message', message);
-      appendDmMessage(message);
+      appendDmMessage(message, false); // Don't auto-scroll during initial load
     });
     scrollDmToBottom(true);
   } else {
@@ -1093,8 +716,9 @@ async function loadDmMessages() {
 /**
  * Append a DM message to the chat
  * @param {Object} message - Message object
+ * @param {boolean} autoScroll - Whether to auto-scroll after appending (default: true)
  */
-function appendDmMessage(message) {
+function appendDmMessage(message, autoScroll = true) {
   const dmMessagesContainer = document.getElementById('dm-messages');
   if (!dmMessagesContainer) {
     console.error('appendDmMessage: Container not found');
@@ -1159,7 +783,12 @@ function appendDmMessage(message) {
   dmMessagesContainer.appendChild(messageRow);
   
   console.log('appendDmMessage: Message appended successfully');
-  scrollDmToBottom(isMine);
+  
+  // Auto-scroll to bottom after appending message
+  // Always scroll for own messages, otherwise only if near bottom
+  if (autoScroll) {
+    scrollDmToBottom(isMine); // Force scroll for own messages
+  }
 }
 
 /**
@@ -1207,8 +836,7 @@ async function subscribeToDmMessages() {
         filter: `conversation_id=eq.${currentDmConversationId}`
       },
       payload => {
-        appendDmMessage(payload.new);
-        scrollDmToBottom();
+        appendDmMessage(payload.new, true); // Auto-scroll for new real-time messages
       }
     )
     .subscribe();
@@ -1331,10 +959,9 @@ function setupDmMessageForm() {
       
       console.log('handleDmSubmit: Message sent successfully', data);
       
-      // Optimistically append the message immediately
+      // Optimistically append the message immediately (force scroll for own messages)
       if (data) {
-        appendDmMessage(data);
-        scrollDmToBottom(true);
+        appendDmMessage(data, true);
       }
       
       // Clear input

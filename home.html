@@ -18,32 +18,8 @@
     <!-- Right Main Content -->
     <main class="main-content">
       <div class="chat-card">
-        <!-- Tab Switcher -->
-        <div class="chat-tabs">
-          <button class="chat-tab active" data-tab="global">Global</button>
-          <button class="chat-tab" data-tab="messages">Messages</button>
-        </div>
-        
-        <!-- Global Chat View -->
-        <div id="global-chat-view" class="chat-view active">
-          <div class="chat-header">
-            <h2>Global Chat</h2>
-            <p>Talk with everyone in ClassChat.</p>
-          </div>
-          <div class="chat-messages-wrapper">
-            <div id="messages" class="chat-messages"></div>
-            <div id="typing-indicator" class="typing-indicator" style="display: none;">
-              1 person typing...
-            </div>
-          </div>
-          <form id="message-form" class="chat-input-row">
-            <input id="message-input" type="text" placeholder="Message ClassChat..." autocomplete="off" maxlength="750" />
-            <button type="submit">Send</button>
-          </form>
-        </div>
-        
         <!-- Messages (DM) View -->
-        <div id="messages-view" class="chat-view">
+        <div id="messages-view" class="chat-view active">
           <div class="dm-header">
             <h2>Messages</h2>
             <button id="add-friends-btn" class="add-friends-btn btn-primary">+ Add Friends</button>
@@ -108,12 +84,6 @@
           </div>
         </div>
       </div>
-      <!-- TODO: Expand this section for future features:
-           - Direct Messages (DMs) interface
-           - Class-based chat rooms
-           - Message history
-           - User search and friend requests
-      -->
     </main>
   </div>
   
