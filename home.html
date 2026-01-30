@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ClassChat - Home</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="home-container">
+    <!-- Left Sidebar - Profile Card -->
+    <aside class="sidebar">
+      <div id="profileCard" class="profile-card">
+        <div class="loading">Loading profile...</div>
+      </div>
+    </aside>
+    
+    <!-- Right Main Content -->
+    <main class="main-content">
+      <div class="chat-card">
+        <!-- Tab Switcher -->
+        <div class="chat-tabs">
+          <button class="chat-tab active" data-tab="global">Global</button>
+          <button class="chat-tab" data-tab="messages">Messages</button>
+        </div>
+        
+        <!-- Global Chat View -->
+        <div id="global-chat-view" class="chat-view active">
+          <div class="chat-header">
+            <h2>Global Chat</h2>
+            <p>Talk with everyone in ClassChat.</p>
+          </div>
+          <div class="chat-messages-wrapper">
+            <div id="messages" class="chat-messages"></div>
+            <div id="typing-indicator" class="typing-indicator" style="display: none;">
+              1 person typing...
+            </div>
+          </div>
+          <form id="message-form" class="chat-input-row">
+            <input id="message-input" type="text" placeholder="Message ClassChat..." autocomplete="off" maxlength="750" />
+            <button type="submit">Send</button>
+          </form>
+        </div>
+        
+        <!-- Messages (DM) View -->
+        <div id="messages-view" class="chat-view">
+          <div class="dm-header">
+            <h2>Messages</h2>
+            <button id="add-friends-btn" class="add-friends-btn btn-primary">+ Add Friends</button>
+          </div>
+          <div class="dm-container">
+            <!-- DM Sidebar -->
+            <div class="dm-sidebar">
+              <div class="dm-section">
+                <h3>Friends</h3>
+                <div id="friends-list" class="dm-list"></div>
+              </div>
+              <div class="dm-section">
+                <h3>Requests</h3>
+                <div id="requests-list" class="dm-list"></div>
+              </div>
+              <div class="dm-section">
+                <h3>People</h3>
+                <div id="people-list" class="dm-list"></div>
+              </div>
+            </div>
+            
+            <!-- DM Chat Area -->
+            <div class="dm-chat">
+              <div id="dm-empty-state" class="dm-empty-state">
+                Select a friend to start a chat.
+              </div>
+              <div id="dm-chat-active" class="dm-chat-active" style="display: none;">
+                <div class="dm-chat-header">
+                  <h3 id="dm-friend-name"></h3>
+                </div>
+                <div class="dm-messages-wrapper">
+                  <div id="dm-messages" class="dm-messages"></div>
+                </div>
+                <form id="dm-message-form" class="chat-input-row" onsubmit="return false;">
+                  <input id="dm-message-input" type="text" placeholder="Type a message..." autocomplete="off" maxlength="750" />
+                  <button type="submit">Send</button>
+                </form>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Add Friends Modal -->
+        <div id="add-friends-modal" class="modal-overlay" style="display: none;">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h2>Add friends</h2>
+              <button id="close-modal-btn" class="modal-close-btn">×</button>
+            </div>
+            <div class="modal-body">
+              <input 
+                id="add-friend-search" 
+                type="text" 
+                placeholder="Search for people..." 
+                autocomplete="off"
+              />
+              <div id="add-friend-status" class="add-friend-status">
+                Idle
+              </div>
+              <div id="add-friend-results" class="add-friend-results"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- TODO: Expand this section for future features:
+           - Direct Messages (DMs) interface
+           - Class-based chat rooms
+           - Message history
+           - User search and friend requests
+      -->
+    </main>
+  </div>
+  
+  <script type="module" src="auth.js"></script>
+  <script type="module" src="profile.js"></script>
+  <script type="module" src="home.js"></script>
+</body>
+</html>
+

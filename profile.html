@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ClassChat - Profile Setup</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="profile-container">
+    <h1>Set Up Your Profile</h1>
+    
+    <form id="profileForm">
+      <div class="form-group">
+        <label for="displayName">Display Name *</label>
+        <input type="text" id="displayName" required>
+      </div>
+      
+      <div class="form-group">
+        <label for="bio">Bio</label>
+        <textarea id="bio" placeholder="Tell us about yourself..."></textarea>
+      </div>
+      
+      <div class="form-group">
+        <label for="grade">Grade</label>
+        <select id="grade">
+          <option value="">Select grade...</option>
+          <option value="6th">6th</option>
+          <option value="7th">7th</option>
+          <option value="8th">8th</option>
+          <option value="9th">9th</option>
+          <option value="10th">10th</option>
+        </select>
+      </div>
+      
+      <div class="classes-section">
+        <label>Classes</label>
+        <div id="classesContainer">
+          <!-- Class rows will be added here dynamically -->
+        </div>
+        <button type="button" class="btn btn-add" id="addClassBtn">+ Add Class</button>
+      </div>
+      
+      <div class="form-group">
+        <label for="interests">Interests</label>
+        <textarea id="interests" placeholder="What are you interested in?"></textarea>
+      </div>
+      
+      <button type="submit" class="btn btn-primary">Save Profile</button>
+      <div id="profileError" class="error-message" style="display: none;"></div>
+    </form>
+  </div>
+  
+  <script type="module" src="auth.js"></script>
+  <script type="module" src="profile.js"></script>
+  <script type="module" src="profile-setup.js"></script>
+</body>
+</html>
+

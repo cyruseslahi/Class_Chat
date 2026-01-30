@@ -1,392 +1,59 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ReType</title>
-
-    <!-- Favicon -->
-    <link rel="icon" type="image/png" href="favicon.png">
-
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css">
-
-    <!-- Supabase -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ClassChat - Login</title>
+  <link rel="stylesheet" href="styles.css">
 </head>
-<body>
-    <!-- Header -->
-    <header>
-        <div class="header-left">
-            <button class="header-icon" id="menuBtn" aria-label="Menu">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <line x1="3" y1="6" x2="21" y2="6"></line>
-                    <line x1="3" y1="12" x2="21" y2="12"></line>
-                    <line x1="3" y1="18" x2="21" y2="18"></line>
-                </svg>
-            </button>
-
-            <button class="header-icon" id="settingsBtn" aria-label="Settings">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <circle cx="12" cy="12" r="3"></circle>
-                    <path d="M12 1v6m0 6v6m0-18a2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82 1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1 1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2z"></path>
-                </svg>
-            </button>
-        </div>
-
-        <h1 class="logo">ReType</h1>
-
-        <div class="header-right">
-            <!-- Login Button (shown when not logged in) -->
-            <button class="login-btn" id="loginBtn" style="display: none;">
-                Login
-            </button>
-
-            <!-- User Section (shown when logged in) -->
-            <div class="user-section" id="userSection">
-                <div class="notif-container">
-                    <button class="header-icon notifications" id="notificationBtn" aria-label="Notifications">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
-                            <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
-                        </svg>
-                    </button>
-                    <span class="notif-badge" id="notificationBadge" style="display: none;">0</span>
-                </div>
-
-                <div class="header-user" id="headerUser">
-                    <span class="user-name" id="username">Cyrus-E</span>
-                    <span class="user-level" id="levelBadge">46</span>
-                </div>
-
-                <!-- Logout Dropdown (hidden by default) -->
-                <div class="logout-dropdown" id="logoutDropdown">
-                    <div class="dropdown-item disabled">Profile</div>
-                    <div class="dropdown-item" id="logoutBtn">Log out</div>
-                </div>
-            </div>
-        </div>
-    </header>
-
-    <!-- Mode Customization Bar (Absolutely Positioned) -->
-    <div id="mode-bar-wrapper">
-        <div class="mode-bar" id="modeBar">
-            <!-- Time Mode -->
-            <div class="mode-item" id="modeTime" data-mode="time">
-                <span class="mode-icon">🕒</span>
-                <span class="mode-label">time</span>
-            </div>
-
-            <!-- Words Mode -->
-            <div class="mode-item" id="modeWords" data-mode="words">
-                <span class="mode-icon">A</span>
-                <span class="mode-label">words</span>
-            </div>
-
-            <!-- Book Mode -->
-            <div class="mode-item" id="modeBook" data-mode="book">
-                <span class="mode-icon">📚</span>
-                <span class="mode-label">book</span>
-            </div>
-
-            <!-- Zen Mode -->
-            <div class="mode-item" id="modeZen" data-mode="zen">
-                <span class="mode-icon">▲</span>
-                <span class="mode-label">zen</span>
-            </div>
-
-            <!-- Custom Mode -->
-            <div class="mode-item" id="modeCustom" data-mode="custom">
-                <span class="mode-icon">🔧</span>
-                <span class="mode-label">custom</span>
-            </div>
-        </div>
-
-        <!-- Sub-menus for modes -->
-        <div class="mode-submenu" id="submenuTime">
-            <div class="submenu-option" data-value="15">15</div>
-            <div class="submenu-option" data-value="30">30</div>
-            <div class="submenu-option" data-value="60">60</div>
-            <div class="submenu-option" data-value="custom">custom</div>
-        </div>
-
-        <div class="mode-submenu" id="submenuWords">
-            <div class="submenu-option" data-value="10">10</div>
-            <div class="submenu-option" data-value="25">25</div>
-            <div class="submenu-option" data-value="50">50</div>
-            <div class="submenu-option" data-value="custom">custom</div>
-        </div>
-
-        <div class="mode-submenu mode-dropdown" id="submenuBook">
-            <div class="dropdown-title">Choose a book</div>
-            <div class="dropdown-option" data-value="harry-potter">Harry Potter and the Philosopher's Stone</div>
-        </div>
-
-        <div class="mode-submenu mode-placeholder" id="submenuCustom">
-            <div class="placeholder-text">Custom mode coming soon</div>
-        </div>
+<body class="auth-page">
+  <!-- Animated background glow effects -->
+  <div class="bg-glow bg-glow-1"></div>
+  <div class="bg-glow bg-glow-2"></div>
+  
+  <div class="auth-container auth-card">
+    <div class="auth-header">
+      <h1>ClassChat</h1>
+      <p class="auth-subtitle">Sign in to your space</p>
     </div>
-
-    <!-- Main Content -->
-    <main>
-        <div class="stats" id="stats">
-            <span id="wpm">0 WPM</span>
-        </div>
-
-        <div class="text-container" id="textContainer">
-            <div class="passage" id="passage"></div>
-            <div class="start-hint" id="startHint">Start typing to begin...</div>
-        </div>
-
-        <div class="additional-stats" id="additionalStats">
-            <span id="accuracy">Accuracy: 100%</span>
-            <span class="divider">•</span>
-            <span id="totalWords">Words: 0</span>
-        </div>
-    </main>
-
-    <!-- Hidden input for capturing keystrokes -->
-    <input
-        type="text"
-        id="hiddenInput"
-        autocomplete="off"
-        autocorrect="off"
-        autocapitalize="off"
-        spellcheck="false"
-        inputmode="text"
-        aria-label="Typing input"
-    >
-
-    <!-- Menu Modal -->
-    <div class="modal" id="menuModal">
-        <div class="modal-content">
-            <h2>Menu</h2>
-            <button class="modal-btn" id="resetProgress">Reset Progress</button>
-            <button class="modal-btn" id="changeBook">Change Book</button>
-            <button class="modal-btn close-modal" id="closeMenu">Close</button>
-        </div>
+    
+    <div class="auth-tabs">
+      <button class="auth-tab active" data-tab="login">Login</button>
+      <button class="auth-tab" data-tab="signup">Sign Up</button>
     </div>
-
-    <!-- Settings Modal -->
-    <div class="modal" id="settingsModal">
-        <div class="modal-content">
-            <h2>Settings</h2>
-            <div class="setting-item">
-                <label for="fontSize">Font Size</label>
-                <input type="range" id="fontSize" min="16" max="32" value="24">
-                <span id="fontSizeValue">24px</span>
-            </div>
-            <button class="modal-btn close-modal" id="closeSettings">Close</button>
-        </div>
-    </div>
-
-    <!-- Notification Panel -->
-    <div class="notification-panel" id="notificationPanel">
-        <h3 class="notification-title">Notifications</h3>
-        <div class="notification-list" id="notificationList">
-            <!-- Notifications will be dynamically rendered here -->
-        </div>
-    </div>
-
-    <!-- Auth Modal -->
-    <div class="auth-modal" id="authModal">
-        <div class="auth-overlay"></div>
-        <div class="auth-container">
-            <button class="auth-close" id="authCloseBtn" aria-label="Close">✕</button>
-
-            <div class="auth-content">
-                <h2 class="auth-title" id="authTitle">Log into ReType</h2>
-
-                <form class="auth-form" id="authForm">
-                    <input
-                        type="text"
-                        id="usernameInput"
-                        class="auth-input"
-                        placeholder="Username"
-                        style="display: none;"
-                    />
-
-                    <input
-                        type="email"
-                        id="emailInput"
-                        class="auth-input"
-                        placeholder="Email Address"
-                        required
-                    />
-
-                    <input
-                        type="password"
-                        id="passwordInput"
-                        class="auth-input"
-                        placeholder="Password"
-                        required
-                    />
-
-                    <div class="auth-error" id="authError"></div>
-
-                    <button type="submit" class="auth-button" id="authSubmitBtn">
-                        Log In
-                    </button>
-                </form>
-
-                <div class="auth-links">
-                    <a href="#" class="auth-link" id="toggleAuthMode">Create an Account</a>
-                    <span class="auth-separator">•</span>
-                    <a href="#" class="auth-link" id="forgotPasswordLink">Forgot Password?</a>
-                </div>
-
-                <div class="auth-divider">
-                    <span>or</span>
-                </div>
-
-                <button class="auth-google" id="googleAuthBtn">
-                    <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-                        <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z" fill="#4285F4"/>
-                        <path d="M9.003 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.96v2.332C2.44 15.983 5.485 18 9.003 18z" fill="#34A853"/>
-                        <path d="M3.964 10.712c-.18-.54-.282-1.117-.282-1.71 0-.593.102-1.17.282-1.71V4.96H.957C.347 6.175 0 7.55 0 9.002c0 1.452.348 2.827.957 4.042l3.007-2.332z" fill="#FBBC05"/>
-                        <path d="M9.003 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.464.891 11.426 0 9.003 0 5.485 0 2.44 2.017.96 4.958L3.967 7.29c.708-2.127 2.692-3.71 5.036-3.71z" fill="#EA4335"/>
-                    </svg>
-                    Log in with Google
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Profile View -->
-    <div class="profile-view" id="profileView">
-        <div class="profile-container">
-            <!-- Back Button -->
-            <button class="profile-back-btn" id="profileBackBtn" aria-label="Back to typing">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M19 12H5M12 19l-7-7 7-7"/>
-                </svg>
-                Back to typing
-            </button>
-
-            <!-- Profile Header -->
-            <div class="profile-header">
-                <div class="profile-avatar">
-                    <div class="avatar-placeholder">
-                        <span id="profileAvatarInitial">C</span>
-                    </div>
-                </div>
-
-                <div class="profile-info">
-                    <div class="profile-name-row">
-                        <h1 class="profile-username" id="profileUsername">Cyrus-E</h1>
-                        <span class="profile-level-badge" id="profileLevelBadge">46</span>
-                    </div>
-
-                    <div class="profile-meta">
-                        <span class="profile-meta-item">
-                            <span class="meta-label">Joined:</span>
-                            <span class="meta-value" id="profileJoinDate">Jan 2024</span>
-                        </span>
-                        <span class="profile-meta-item">
-                            <span class="meta-label">Streak:</span>
-                            <span class="meta-value" id="profileStreak">0 days</span>
-                        </span>
-                        <span class="profile-meta-item">
-                            <span class="meta-label">Time typing:</span>
-                            <span class="meta-value" id="profileTotalTime">00:00:00</span>
-                        </span>
-                    </div>
-
-                    <div class="profile-stats-row">
-                        <div class="profile-stat-item">
-                            <span class="stat-value" id="profileTestsStarted">0</span>
-                            <span class="stat-label">tests started</span>
-                        </div>
-                        <div class="profile-stat-item">
-                            <span class="stat-value" id="profileTestsCompleted">0</span>
-                            <span class="stat-label">tests completed</span>
-                        </div>
-                        <div class="profile-stat-item">
-                            <span class="stat-value" id="profileAvgWPM">0</span>
-                            <span class="stat-label">avg wpm</span>
-                        </div>
-                    </div>
-
-                    <!-- XP Progress Bar -->
-                    <div class="profile-xp-container">
-                        <div class="profile-xp-label">
-                            <span>Level progress</span>
-                            <span id="profileXPText">0 / 1000 XP</span>
-                        </div>
-                        <div class="profile-xp-bar">
-                            <div class="profile-xp-fill" id="profileXPFill" style="width: 0%;"></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Bio Section -->
-            <div class="profile-bio-section">
-                <div class="profile-bio-header">
-                    <h2 class="profile-section-title">Bio</h2>
-                    <button class="profile-bio-edit-btn" id="profileBioEditBtn" aria-label="Edit bio">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-                        </svg>
-                    </button>
-                </div>
-                <div class="profile-bio-content" id="profileBioContent">
-                    <p class="profile-bio-text" id="profileBioText">No bio yet. Click the edit button to add one!</p>
-                    <textarea class="profile-bio-textarea" id="profileBioTextarea" style="display: none;" placeholder="Write something about yourself..."></textarea>
-                    <button class="profile-bio-save-btn" id="profileBioSaveBtn" style="display: none;">Save</button>
-                </div>
-            </div>
-
-            <!-- Stats Overview -->
-            <div class="profile-stats-section">
-                <h2 class="profile-section-title">Personal Bests</h2>
-                <div class="profile-stats-grid" id="profileStatsGrid">
-                    <!-- Stats cards will be dynamically generated -->
-                    <div class="profile-stat-card">
-                        <div class="stat-card-time">15 seconds</div>
-                        <div class="stat-card-wpm">--</div>
-                        <div class="stat-card-acc">--% acc</div>
-                    </div>
-                    <div class="profile-stat-card">
-                        <div class="stat-card-time">30 seconds</div>
-                        <div class="stat-card-wpm">--</div>
-                        <div class="stat-card-acc">--% acc</div>
-                    </div>
-                    <div class="profile-stat-card">
-                        <div class="stat-card-time">60 seconds</div>
-                        <div class="stat-card-wpm">--</div>
-                        <div class="stat-card-acc">--% acc</div>
-                    </div>
-                    <div class="profile-stat-card">
-                        <div class="stat-card-time">120 seconds</div>
-                        <div class="stat-card-wpm">--</div>
-                        <div class="stat-card-acc">--% acc</div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Activity Heatmap -->
-            <div class="profile-heatmap-section">
-                <h2 class="profile-section-title">Activity</h2>
-                <div class="profile-heatmap" id="profileHeatmap">
-                    <!-- Heatmap will be dynamically generated -->
-                </div>
-            </div>
-
-            <!-- Performance Graph -->
-            <div class="profile-graph-section">
-                <h2 class="profile-section-title">Performance over time</h2>
-                <div class="profile-graph-container">
-                    <canvas id="profilePerformanceGraph" width="800" height="300"></canvas>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <script src="app.js"></script>
+    
+    <!-- Login Form -->
+    <form id="loginForm" class="auth-form active">
+      <div class="form-group">
+        <label for="loginEmail">Email</label>
+        <input type="email" id="loginEmail" required>
+      </div>
+      <div class="form-group">
+        <label for="loginPassword">Password</label>
+        <input type="password" id="loginPassword" required>
+      </div>
+      <button type="submit" class="btn btn-primary">Log In</button>
+      <div id="loginError" class="error-message" style="display: none;"></div>
+    </form>
+    
+    <!-- Sign Up Form -->
+    <form id="signupForm" class="auth-form">
+      <div class="form-group">
+        <label for="signupEmail">Email</label>
+        <input type="email" id="signupEmail" required>
+      </div>
+      <div class="form-group">
+        <label for="signupPassword">Password</label>
+        <input type="password" id="signupPassword" required minlength="6">
+      </div>
+      <button type="submit" class="btn btn-primary">Sign Up</button>
+      <div id="signupError" class="error-message" style="display: none;"></div>
+      <div id="signupSuccess" class="success-message" style="display: none;"></div>
+    </form>
+  </div>
+  
+  <script type="module" src="auth.js"></script>
+  <script type="module" src="index.js"></script>
 </body>
 </html>
 
