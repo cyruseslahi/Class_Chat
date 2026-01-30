@@ -545,12 +545,6 @@ async function openOrCreateConversation(friendId) {
   const chatActive = document.getElementById('dm-chat-active');
   const friendNameEl = document.getElementById('dm-friend-name');
   
-  console.log('openOrCreateConversation: UI elements check', {
-    emptyState: !!emptyState,
-    chatActive: !!chatActive,
-    friendNameEl: !!friendNameEl
-  });
-  
   if (!emptyState) {
     console.error('openOrCreateConversation: dm-empty-state element not found');
     alert('Error: Chat UI not found. Please refresh the page.');
